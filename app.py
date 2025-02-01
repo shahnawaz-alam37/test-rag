@@ -204,32 +204,33 @@ class RAGApplication:
         return self._client
 
     def process_query(self, query: str, k: int = 3) -> str:
-        relevant_docs = self.vector_store.similarity_search(query, k)
-        
-        context = "\n".join([f"Document {i+1}:\n{doc[0]}\n" 
-                           for i, doc in enumerate(relevant_docs)])
-        
-        messages = [
-            {"role": "system","content": "You are a helpful AI assistant. Provide clear and concise answers based on the context provided. If there are any <think></think> tags in the response, remove them and their contents."},
-            {"role": "user","content": (f"Context:\n{context}\n\nQuestion: {query}")}
-        ]
-        
-        completion = self.client.chat.completions.create(
-            model="deepseek-r1-distill-llama-70b",
-            messages=messages,
-            temperature=0.6,
-            max_completion_tokens=4096,
-            top_p=0.95,
-            stream=True,
-        )
-        
-        response = ""
-        for chunk in completion:
-            content = chunk.choices[0].delta.content
-            if content:
-                response += content
-        
-        return response
+        try:
+            relevant_docs = self.vector_store.similarity_search(query, k)
+            
+            context = "\n".join([f"Document {i+1}:\n{doc[0]}\n" 
+                               for i, doc in enumerate(relevant_docs)])
+            
+            messages = [
+                {"role": "system", "content": "You are a helpful AI assistant. Provide clear and concise answers based on the context provided."},
+                {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {query}"}
+            ]
+            
+            # Updated Groq chat completion parameters
+            completion = self.client.chat.completions.create(
+                model="mixtral-8x7b-32768",  # Changed to a more reliable model
+                messages=messages,
+                temperature=0.7,
+                max_tokens=2048,  # Changed from max_completion_tokens
+                top_p=0.95,
+                stream=False  # Changed to False for simpler handling
+            )
+            
+            # Simplified response handling
+            return completion.choices[0].message.content
+            
+        except Exception as e:
+            st.error(f"Query processing error: {str(e)}")
+            raise
     
     def generate_mind_map(self, prompt: str) -> dict:
         messages = [
