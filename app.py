@@ -236,65 +236,101 @@ class RAGApplication:
         return mind_map
 
 def main():
-    st.set_page_config(page_title="Advanced RAG System", layout="wide")
-    
-    st.title("Advanced RAG System")
-    
-    # Initialize the RAG application
-    if 'rag_app' not in st.session_state:
-        st.session_state.rag_app = RAGApplication(api_key=GROQ_API_KEY)
-    
-    # File upload section
-    st.header("Document Upload")
-    uploaded_files = st.file_uploader(
-        "Upload your documents (PDF, DOCX, TXT)", 
-        accept_multiple_files=True,
-        type=['pdf', 'docx', 'txt']
-    )
-    
-    if uploaded_files:
-        with st.spinner("Processing documents..."):
-            for file in uploaded_files:
-                try:
-                    text = st.session_state.rag_app.doc_processor.process_file(file)
-                    st.session_state.rag_app.vector_store.add_texts([text])
-                    st.success(f"Successfully processed {file.name}")
-                except Exception as e:
-                    st.error(f"Error processing {file.name}: {str(e)}")
-    
-    # Query section
-    st.header("Ask Questions")
-    query = st.text_input("Enter your question:")
-    
-    if st.button("Get Answer"):
-        if not query:
-            st.warning("Please enter a question.")
-        else:
-            with st.spinner("Generating response..."):
-                try:
-                    response = st.session_state.rag_app.process_query(query)
-                    st.write("Answer:", response)
-                    st.code(response, language='text')
-                    if st.button("Copy Answer"):
-                        st.write("Answer copied to clipboard!")
-                        st.experimental_set_query_params(answer=response)
-                except Exception as e:
-                    st.error(f"Error generating response: {str(e)}")
-    
-    # # Mind map generation section
-    # st.header("Generate Mind Map")
-    # prompt = st.text_input("Enter a prompt for mind map:")
-    
-    # if st.button("Generate Mind Map"):
-    #     if not prompt:
-    #         st.warning("Please enter a prompt.")
-    #     else:
-    #         with st.spinner("Generating mind map..."):
-    #             try:
-    #                 mind_map = st.session_state.rag_app.generate_mind_map(prompt)
-    #                 st.write("Mind Map:", mind_map)
-    #             except Exception as e:
-    #                 st.error(f"Error generating mind map: {str(e)}")
+    try:
+        # Use wider layout and disable the hamburger menu
+        st.set_page_config(
+            page_title="Advanced RAG System",
+            layout="wide",
+            initial_sidebar_state="expanded",
+            menu_items=None
+        )
+        
+        # Add custom CSS to ensure inputs render properly
+        st.markdown("""
+            <style>
+                .stTextInput > div > div > input {
+                    width: 100%;
+                }
+                .stFileUploader > div > div {
+                    width: 100%;
+                }
+            </style>
+            """, unsafe_allow_html=True)
+        
+        st.title("Advanced RAG System")
+        
+        # Initialize the RAG application with error catching
+        if 'rag_app' not in st.session_state:
+            try:
+                st.session_state.rag_app = RAGApplication(api_key=GROQ_API_KEY)
+            except Exception as e:
+                st.error(f"Error initializing application: {str(e)}")
+                st.stop()
+        
+        # File upload section with error handling
+        st.header("Document Upload")
+        try:
+            uploaded_files = st.file_uploader(
+                "Upload your documents (PDF, DOCX, TXT)", 
+                accept_multiple_files=True,
+                type=['pdf', 'docx', 'txt'],
+                key="file_uploader"  # Add a unique key
+            )
+        except Exception as e:
+            st.error(f"Error with file uploader: {str(e)}")
+            uploaded_files = None
+        
+        # Query section with error handling
+        st.header("Ask Questions")
+        try:
+            query = st.text_input("Enter your question:", key="query_input")  # Add a unique key
+        except Exception as e:
+            st.error(f"Error with text input: {str(e)}")
+            query = None
+        
+        if uploaded_files:
+            with st.spinner("Processing documents..."):
+                for file in uploaded_files:
+                    try:
+                        text = st.session_state.rag_app.doc_processor.process_file(file)
+                        st.session_state.rag_app.vector_store.add_texts([text])
+                        st.success(f"Successfully processed {file.name}")
+                    except Exception as e:
+                        st.error(f"Error processing {file.name}: {str(e)}")
+        
+        if st.button("Get Answer"):
+            if not query:
+                st.warning("Please enter a question.")
+            else:
+                with st.spinner("Generating response..."):
+                    try:
+                        response = st.session_state.rag_app.process_query(query)
+                        st.write("Answer:", response)
+                        st.code(response, language='text')
+                        if st.button("Copy Answer"):
+                            st.write("Answer copied to clipboard!")
+                            st.experimental_set_query_params(answer=response)
+                    except Exception as e:
+                        st.error(f"Error generating response: {str(e)}")
+        
+        # # Mind map generation section
+        # st.header("Generate Mind Map")
+        # prompt = st.text_input("Enter a prompt for mind map:")
+        
+        # if st.button("Generate Mind Map"):
+        #     if not prompt:
+        #         st.warning("Please enter a prompt.")
+        #     else:
+        #         with st.spinner("Generating mind map..."):
+        #             try:
+        #                 mind_map = st.session_state.rag_app.generate_mind_map(prompt)
+        #                 st.write("Mind Map:", mind_map)
+        #             except Exception as e:
+        #                 st.error(f"Error generating mind map: {str(e)}")
+
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
+        st.stop()
 
 if __name__ == "__main__":
     main()
