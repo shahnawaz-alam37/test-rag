@@ -175,34 +175,10 @@ class VectorStore:
 
 class RAGApplication:
     def __init__(self, api_key: str = None):
-        if not api_key:
-            raise ValueError("API key is required")
-            
-        # Initialize components only when needed
-        self._vector_store = None
-        self._doc_processor = None
-        self._client = None
-        self.api_key = api_key
-    
-    @property
-    def vector_store(self):
-        if self._vector_store is None:
-            self._vector_store = VectorStore()
-        return self._vector_store
-    
-    @property
-    def doc_processor(self):
-        if self._doc_processor is None:
-            self._doc_processor = DocumentProcessor()
-        return self._doc_processor
-    
-    @property
-    def client(self):
-        if self._client is None:
-            # Initialize Groq client with minimal arguments
-            self._client = Groq(api_key=self.api_key)
-        return self._client
-
+        self.vector_store = VectorStore()
+        self.doc_processor = DocumentProcessor()
+        self.client = Groq(api_key=api_key)
+        
     def process_query(self, query: str, k: int = 3) -> str:
         try:
             relevant_docs = self.vector_store.similarity_search(query, k)
@@ -262,11 +238,12 @@ class RAGApplication:
 
 def main():
     try:
-        # Use wider layout
+        # Use wider layout and disable the hamburger menu
         st.set_page_config(
             page_title="Advanced RAG System",
             layout="wide",
-            initial_sidebar_state="expanded"
+            initial_sidebar_state="expanded",
+            menu_items=None
         )
         
         # Add custom CSS to ensure inputs render properly
@@ -287,7 +264,6 @@ def main():
         if 'rag_app' not in st.session_state:
             try:
                 st.session_state.rag_app = RAGApplication(api_key=GROQ_API_KEY)
-                st.success("Application initialized successfully!")
             except Exception as e:
                 st.error(f"Error initializing application: {str(e)}")
                 st.stop()
